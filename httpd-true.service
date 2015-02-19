@@ -1,0 +1,8 @@
+[Unit]
+Description=Httpd true 
+
+[Service]
+ExecStart=/usr/local/bin/httpd-true
+User=subsonic
+
+PrivateTmp=yes

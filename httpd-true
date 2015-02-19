@@ -1,0 +1,58 @@
+#!/bin/env python3
+import os
+import sys
+import time
+import socket
+import http.server
+
+
+def get_systemd_socket():
+    SYSTEMD_FIRST_SOCKET_FD = 3
+    """Shows how to get the socket"""
+    socket_type = http.server.HTTPServer.socket_type
+    address_family = http.server.HTTPServer.address_family
+    return socket.fromfd(SYSTEMD_FIRST_SOCKET_FD, address_family, socket_type)
+
+
+class RequestHandler(http.server.BaseHTTPRequestHandler):
+    """Returns the string 'true' to all requests"""
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"true")
+        self.wfile.write(b"\n")
+        return
+    do_POST = do_GET
+
+
+class SockInheritHTTPServer(http.server.HTTPServer):
+    def __init__(self, address_info, handler, bind_and_activate=True):
+        self.socket = get_systemd_socket()
+        # Note that we call it with bind_and_activate = False.
+        http.server.HTTPServer.__init__(self,
+                                        address_info,
+                                        handler,
+                                        bind_and_activate=False)
+        if bind_and_activate:
+            self.server_activate()
+
+
+def wait_loop(delay=60):
+    # The connection/port/host doesn't really matter as we don't allocate the
+    # socket ourselves. Pass it in as localhost:80
+    httpserv = SockInheritHTTPServer(('localhost', 80), RequestHandler)
+    httpserv.timeout = 1
+    start = time.monotonic()
+    end = start + delay
+    while time.monotonic() < end:
+        httpserv.handle_request()
+    httpserv.server_close()
+
+
+if __name__ == "__main__":
+    if os.environ.get('LISTEN_PID', None) == str(os.getpid()):
+        wait_loop()
+        print("Done serving, shutting down")
+        sys.exit()
+    else:
+        raise SystemExit("This server should only run from systemd")
