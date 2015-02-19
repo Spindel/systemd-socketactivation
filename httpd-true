@@ -7,8 +7,8 @@ import http.server
 
 
 def get_systemd_socket():
-    SYSTEMD_FIRST_SOCKET_FD = 3
     """Shows how to get the socket"""
+    SYSTEMD_FIRST_SOCKET_FD = 3
     socket_type = http.server.HTTPServer.socket_type
     address_family = http.server.HTTPServer.address_family
     return socket.fromfd(SYSTEMD_FIRST_SOCKET_FD, address_family, socket_type)
