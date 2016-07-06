@@ -27,12 +27,17 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
 class SockInheritHTTPServer(http.server.HTTPServer):
     def __init__(self, address_info, handler, bind_and_activate=True):
-        self.socket = get_systemd_socket()
         # Note that we call it with bind_and_activate = False.
         http.server.HTTPServer.__init__(self,
                                         address_info,
                                         handler,
                                         bind_and_activate=False)
+
+        # The socket from systemd needs to be set AFTER calling the parent's
+        # class's constructor, otherwise HTTPServer.__init__() will re-set
+        # self.socket() and the handover won't work.
+        self.socket = get_systemd_socket()
+
         if bind_and_activate:
             self.server_activate()
 
